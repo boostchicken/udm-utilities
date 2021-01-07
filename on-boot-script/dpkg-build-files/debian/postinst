@@ -20,11 +20,37 @@ set -e
 
 case "$1" in
     configure)
-       scp -P "$(cat /etc/unifi-os/ssh_proxy_port)" -o StrictHostKeyChecking=no -q /usr/share/udm-boot/on_boot.sh root@localhost:/mnt/data/on_boot.sh
-       /sbin/ssh-proxy 'chmod +x /mnt/data/on_boot.sh && mkdir -p /mnt/data/on_boot.d'
+       echo "Create udm-boot file structure"
+       /sbin/ssh-proxy 'mkdir -p /mnt/data/udm-boot'
+       scp -P "$(cat /etc/unifi-os/ssh_proxy_port)" -o StrictHostKeyChecking=no -q /usr/share/udm-boot/host/* root@localhost:/mnt/data/udm-boot/
+       /sbin/ssh-proxy 'chmod +x /mnt/data/udm-boot/*.sh'
+       /sbin/ssh-proxy '/mnt/data/udm-boot/install.sh'
 
-       deb-systemd-invoke enable udm-boot
-       deb-systemd-invoke start udm-boot
+       # enable and start udm-boot
+       echo "Enable udm-boot service"
+       systemctl enable --now udm-boot.service
+
+       echo ""
+       echo ""
+       echo "udm-boot container started on the udm."
+       echo ""
+       echo "if possible do not use podman on the udm directly"
+       echo "to change the state of the udm-boot container."
+       echo "Use systemctl in the unifi-os container for this."
+       echo "Otherwise you have to take care of /run/udm-boot.service-cid"
+       echo "by yourself before it can be started again."
+       echo ""
+       echo "some example commands to manage it from inside the unifi-os shell:"
+       echo ""
+       echo "  - systemctl start udm-boot"
+       echo "  - systemctl stop udm-boot"
+       echo "  - systemctl restart udm-boot"
+       echo "  - systemctl status udm-boot"
+       echo "  - ssh-proxy podman logs udm-boot"
+       echo "  - ssh-proxy podman exec -it udm-boot /bin/bash"
+       echo ""
+
+
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

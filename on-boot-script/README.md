@@ -20,13 +20,29 @@
     rm /etc/systemd/system/udmboot.service
     ```
 
-* [build_deb.sh](build_deb.sh) can be used to build the package by yourself.
-    * [dpkg-build-files](dpkg-build-files) contains the sources that debuild uses to build the package if you want to build it yourself / change it
-    * by default it uses docker or podman to build the debian package
-    * use ```./build_deb.sh build``` to not using a container
-    * the resulting package will be in [packages/](packages/)
+    Note: since 1.1.0 all scripts get automatically moved to /mnt/data/udm-boot/...
 
-* Built on Ubuntu-20.04 on Windows 10/WSL2
+* [build.sh](build.sh) can be used to build the package by yourself.
+    * Be sure to have at least "buildah" installed for the default container based build.
+
+    * The following command builds everything that is needed and even deploys and install udm-boot onto your device (you need a working ssh key based auth to your udm!):
+
+      ```bash
+        export UDM_HOST=<MY UDM IP>
+	./build.sh && ./build.sh deploy && ./build.sh install
+      ```
+
+    * Overview
+        * [dpkg-build-files](dpkg-build-files)
+          contains the most scripts and all sources that debuild uses to build the package if you want to build it yourself
+        * [images](images)
+          contains the dockerfiles to build the udm-boot container itself.
+          for maintainability it's split in three depending files.
+        * [packages/](packages)
+          the required build debian package will be put here
+
+    * Built on Ubuntu-20.04 on Windows 10/WSL2
+
 
 ## Steps
 
@@ -36,22 +52,54 @@
     unifi-os shell
     ```
 
-2. Download [udm-boot_1.0.2_all.deb](packages/udm-boot_1.0.2_all.deb) and install it and go back to the UDM
+2. Download [udm-boot_1.1.0_all.deb](packages/udm-boot_1.1.0_all.deb) and install it and go back to the UDM
 
     ```bash
-    curl -L https://raw.githubusercontent.com/boostchicken/udm-utilities/master/on-boot-script/packages/udm-boot_1.0.2_all.deb -o udm-boot_1.0.2_all.deb
-    dpkg -i udm-boot_1.0.2_all.deb
+    curl -L https://raw.githubusercontent.com/boostchicken/udm-utilities/master/on-boot-script/packages/udm-boot_1.1.0_all.deb -o udm-boot_1.1.0_all.deb
+    dpkg -i udm-boot_1.1.0_all.deb
     exit
     ```
 
-3. Copy any shell scripts you want to run to /mnt/data/on_boot.d on your UDM (not the unifi-os shell) and make sure they are executable and have the correct shebang (#!/bin/sh)
+3. Copy any shell scripts you want to run to /mnt/data/udm-boot/on_boot.d on your UDM (not the unifi-os shell) and make sure they are executable and have the correct shebang (#!/bin/sh)
 
     Examples:
     * Start a DNS Container [10-dns.sh](../dns-common/on_boot.d/10-dns.sh)
     * Start wpa_supplicant [on_boot.d/10-wpa_supplicant.sh](examples/udm-files/on_boot.d/10-wpa_supplicant.sh)
     * Add a persistent ssh key for the root user [on_boot.d/15-add-root-ssh-key.sh](examples/udm-files/on_boot.d/15-add-root-ssh-key.sh)
 
+## Examples
+
+* [Chrony-udm (NTP Server)](examples/chrony-udm.md)
+
+## Uninstall
+
+1. Get into the unifios shell on your udm
+
+    ```bash
+    unifi-os shell
+    ```
+
+2. Uninstall udm-boot (`-P` will cleanup the 
+
+    ```bash
+    dpkg -P udm-boot
+    ```
+
+3. (Optional) Cleanup data if you want. **WARNING**: this will remove all your customizations (scripts, services, containers etc.)!
+
+    ```bash
+    exit # to drop out of the unifi-os shell and execute on the udm itself
+    rm -rf /mnt/data/udm-boot # delete all udm-boot data on the disk
+    podman image prune # cleanup container images (not only from udm-boot, is save if you didn't create images by yourself)
+    podman volume prune # cleanup container volumes (not only from udm-boot, is save if you didn't create containers or volumes by yourself)
+    ```
+
+
 ## Version History
+
+### 1.1.0
+
+* move everything into udm-boot container
 
 ### 1.0.2
 
